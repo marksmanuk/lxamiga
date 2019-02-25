@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #
 # Simple Linux client for CloanTo Amiga Explorer running on a Commodore Amiga
-# Version 1.00 - 24/12/2017
+# Version 1.01 - 24/02/2019
 #
 # by Mark Street <marksmanuk@gmail.com>
 #
@@ -161,14 +161,22 @@ sub read_port
 sub read_serial
 {
 	my $len = shift || 128;
+	my $ret = "";
 
-#	$serial->read_const_time(1000);
-	$serial->read_char_time(350);
-	my $read = $serial->read($len);
-	print "="x73,"\n" if $args{v};
-	print "RECEIVED ".(length($read))."/$len BYTES:\n" if $args{v};
-	Dump($read) if $args{v};
-	return $read;
+	$serial->read_char_time(150);
+
+	for (my $tries=0; $tries<5; $tries++)
+	{
+		my $read = $serial->read($len);
+		if ($args{v})
+		{
+			print "="x73,"\n";
+			print "RECEIVED ".(length($read))."/$len BYTES:\n";
+			Dump($read);
+		}
+		$ret .= $read;
+		return $ret if length($ret) >= $len || !length($read);
+	}
 }
 
 sub read_socket
@@ -368,6 +376,7 @@ sub get_connect
 		return;
 	}
 
+	die "No response from Amiga.  Is AExplorer running?" unless length($ack);
 	die "Unexpected compliance ($ack) for 0x002" unless $ack eq "PkOk";
 
 	my $rx = read_message();
@@ -597,7 +606,7 @@ sub get_directory
 
 	foreach my $ref (@ret)
 	{
-		printf " %-20s", $ref->{name};
+		printf " %-21s", $ref->{name};
 		printf " %8d kB %8d kB", $ref->{used}/1024, $ref->{size}/1024 if $ref->{name} =~ /:/;
 		printf " %8d", $ref->{size} if $ref->{name} !~ /:/ && $ref->{type} != 0x02;
 		printf "    (dir)", if $ref->{type} == 0x02;
@@ -729,16 +738,24 @@ sub format_disk
 	my $ack = read_ack();
 	die "Unexpected compliance ($ack) for 0x006e" unless $ack eq "PkOk";
 
-	# Read 0x000 from host (ignore any warnings):
+	# Read reply from host (ignore any warnings):
 	my $rx = read_message();
 	write_ack();
-	if ($rx->{header}{id} != 0x0000)
+	if ($rx->{header}{id} != 0x0000 && $rx->{header}{id} != 0x0008)
 	{
-		write_message(0x0000, "");
+		send_close();	# Abort
+		die "Disk is not writable ($rx->{header}{id})"
+			if $rx->{header}{id} == 0x0002;
+		die "Rejected ($rx->{header}{id}) Write Protect or Requires KS 2.0+"
+			if $rx->{header}{id} == 0x0001;		# KS 1.3
+		die "Unexpected message received ($rx->{header}{id})";
+	}
+
+	if ($rx->{header}{id} == 0x0008) 	# Write protect
+	{
+		write_message(0x0000, "");	# Continue
 		my $ack = read_ack();
-		die "Disk is not writable ($rx->{header}{id})" if $rx->{header}{id} == 0x0002;
-		die "Unexpected message received ($rx->{header}{id})"
-			if $rx->{header}{id} != 0x0008;		# Force overwrite
+		die "Format failed to force overwrite ($ack)" unless $ack eq "PkOk";
 	}
 	
 	# Read 0x000B from host:

@@ -11,20 +11,20 @@ $ sudo dnf install perl-Device-SerialPort
 
 In theory the script may also run on Windows but is untested and you'd probably be better off running the official Amiga Explorer client for Windows.
 
-I have tested with a stock Amiga 600 and Amiga 1200 using both Serial at 19,200 baud and over Ethernet with a 3com Etherlink III PCMCIA card and AmiTCP 4.1.
+I have tested with a stock Amiga 500, Amiga 600 and Amiga 1200 using both Serial at 19,200 baud and over Ethernet with a 3com Etherlink III PCMCIA card and AmiTCP 4.1.
 
 ### Prerequisites
 
 You will need Perl 5 installed and Device::SerialPort.
 
-#### Serial
+#### Serial (RS232)
 
-* Amiga is running Exporer process, default 19,200 8N1 RTS/CTS
+* Amiga is running Amiga Explorer process, default 19,200 8N1 RTS/CTS
 * Amiga is connected to Linux with null serial cable, default serial device /dev/ttyUSB0 - using USB/Serial adapter.
 
 #### Ethernet (TCP/IP)
 
-* Amiga is running Explorer process, default 192.168.1.200 port 356
+* Amiga is running AMiga Explorer process, default 192.168.1.200 port 356
 * Amiga is connected to same network as Linux
 
 ## Example Usage
@@ -71,6 +71,7 @@ Read 996/996 Bytes 100.0%
 
 
 2. Format disk:
+(Requires Kickstart 2.0 or greater)
 
 $ lxamiga.pl -f df1: Blank
 Connected to host successfully at 19200
@@ -105,7 +106,7 @@ Read 524288/524288 Bytes 100.0%
 $ md5sum kick.rom
 e40a5dfb3d017ba8779faba30cbd1c8e  kick.rom (Kickstart 3.1)
 
-6. Upload a file to the Amiga (over LAN):
+6. Send a file to the Amiga over LAN:
 
 $ lxamiga.pl -t -s ProTracker-3.15.lha RAM:
 Connected to 192.168.1.200:356 successfully.
